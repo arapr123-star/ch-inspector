@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Inspector">
+<meta name="theme-color" content="#14110C">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+<title>CH Inspector</title>
+<style>
+  :root{
+    --ink:#14110C; --ink2:#1E1A12; --card:#221D14; --line:#3A3326;
+    --gold:#C6A861; --gold-deep:#A2823B; --ivory:#F5F0E6; --muted:#A99C7E;
+    --ok:#3F7D4E; --warn:#B98A2E; --bad:#B5483B; --wet:#7A2230;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--ink);color:var(--ivory);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+  button{font:inherit;color:inherit;cursor:pointer;}
+  input,select,textarea{font:inherit;}
+  .hidden{display:none!important;}
+
+  /* App bar */
+  .bar{position:sticky;top:0;z-index:20;background:rgba(20,17,12,.92);
+    backdrop-filter:saturate(160%) blur(10px);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;padding:12px 16px;}
+  .bar .coin{width:30px;height:30px;}
+  .bar .coin img{width:100%;height:100%;object-fit:contain;}
+  .bar .title{font-weight:700;letter-spacing:.18em;text-transform:uppercase;font-size:13px;}
+  .bar .sub{font-size:11px;color:var(--muted);letter-spacing:.04em;}
+  .bar .sp{flex:1;}
+  .iconbtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);
+    background:var(--card);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .back{font-size:14px;color:var(--gold);background:none;border:none;padding:8px 4px;}
+
+  .wrap{max-width:760px;margin:0 auto;padding:16px 16px 120px;}
+  h2{font-size:22px;font-weight:700;margin:6px 0 2px;}
+  .lead{color:var(--muted);font-size:13.5px;line-height:1.5;margin:0 0 14px;}
+  .label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-deep);margin:18px 0 8px;font-weight:700;}
+
+  /* Cards / inputs */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.03em;}
+  .field input,.field select,.field textarea{width:100%;background:var(--ink2);border:1px solid var(--line);
+    color:var(--ivory);border-radius:10px;padding:13px 14px;font-size:16px;outline:none;}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* Buttons */
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:600;min-height:52px;}
+  .btn.primary{background:linear-gradient(180deg,#D2B570,#C6A861);color:#1b1610;}
+  .btn.ink{background:var(--ink2);border:1px solid var(--line);color:var(--ivory);}
+  .btn.ghost{background:none;border:1px dashed var(--line);color:var(--gold);}
+  .btn.sm{min-height:44px;padding:11px 14px;font-size:14px;width:auto;}
+  .btnrow{display:flex;gap:10px;}
+  .btnrow .btn{flex:1;}
+  .fab{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));max-width:728px;margin:0 auto;z-index:30;}
+
+  /* Home list */
+  .insp{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:14px;margin-bottom:10px;}
+  .insp .nm{font-weight:600;font-size:15px;}
+  .insp .meta{font-size:12px;color:var(--muted);margin-top:2px;}
+  .insp .sp{flex:1;}
+  .pill{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted);}
+
+  /* Rooms / capture */
+  .room{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;}
+  .room .top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .room .rn{font-weight:600;font-size:15px;}
+  .room .rt{font-size:11px;color:var(--gold-deep);text-transform:uppercase;letter-spacing:.08em;}
+  .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;}
+  .thumb{width:74px;height:74px;border-radius:10px;overflow:hidden;position:relative;border:1px solid var(--line);background:#000;}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb .x{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;
+    background:rgba(0,0,0,.6);color:#fff;border:none;font-size:13px;line-height:22px;text-align:center;padding:0;}
+  .del{margin-left:auto;color:var(--bad);background:none;border:none;font-size:13px;}
+
+  /* Readings */
+  .reads{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:8px;}
+  .read{background:var(--card);padding:10px 12px;}
+  .read .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  .read .v{font-size:20px;font-weight:700;margin-top:2px;}
+  .read .v small{font-size:11px;color:var(--gold-deep);font-weight:600;}
+  .read input{width:70px;background:var(--ink2);border:1px solid var(--line);color:var(--ivory);border-radius:7px;padding:4px 6px;font-size:15px;}
+  .tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+  .tag.dry{background:#234a2c;color:#bfe6c6;} .tag.risk{background:#4d3c12;color:#f0d79a;} .tag.wet{background:var(--wet);color:#fff;}
+  .item{display:flex;align-items:center;gap:10px;background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;}
+  .item img{width:54px;height:54px;border-radius:8px;object-fit:cover;}
+  .item .d{flex:1;font-size:13px;}
+
+  .status{font-size:12px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:8px;}
+  .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .net{font-size:11px;}.net.off{color:var(--bad);}.net.on{color:var(--ok);}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;}
+  .sheet{background:var(--ink2);border-top-left-radius:20px;border-top-right-radius:20px;width:100%;max-width:760px;margin:0 auto;padding:18px 16px calc(20px + env(safe-area-inset-bottom));border-top:1px solid var(--line);}
+  .sheet h3{margin:4px 0 14px;font-size:17px;}
+
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#000;color:#fff;
+    border:1px solid var(--line);padding:11px 16px;border-radius:24px;font-size:13px;z-index:99;max-width:90%;text-align:center;}
+
+  a{color:var(--gold);}
+  .tiny{font-size:11px;color:var(--muted);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section id="screen-home">
+  <div class="bar">
+    <div class="coin"><img src="./assets/coin_gold.png" alt=""></div>
+    <div><div class="title">CH Inspector</div><div class="sub">Field capture · The Doctor for Houses</div></div>
+    <div class="sp"></div>
+    <span id="net" class="net">●</span>
+    <button class="iconbtn" onclick="openSettings()" aria-label="Settings">⚙︎</button>
+  </div>
+  <div class="wrap">
+    <div id="keywarn" class="card hidden" style="border-color:var(--warn)">
+      <b>One-time setup:</b> add your Anthropic API key in <a onclick="openSettings()">Settings ⚙︎</a> so the inspector can read instrument photos automatically.
+    </div>
+    <div class="label">Inspections</div>
+    <div id="insp-list"></div>
+    <div id="insp-empty" class="card tiny hidden">No inspections yet. Tap <b>New inspection</b> to begin.</div>
+  </div>
+  <button class="btn primary fab" onclick="newInspection()">＋ New inspection</button>
+</section>
+
+<!-- ================= SETUP ================= -->
+<section id="screen-setup" class="hidden">
+  <div class="bar"><button class="back" onclick="go('home')">‹ Inspections</button><div class="sp"></div><div class="sub">Step 1 · Property</div></div>
+  <div class="wrap">
+    <h2>New inspection</h2>
+    <p class="lead">The basics for this visit. You can change any of it later.</p>
+    <div class="card">
+      <div class="field"><label>Client name</label><input id="f-client" placeholder="e.g. Puan Rina Ahmad" autocomplete="off"></div>
+      <div class="field"><label>Property address</label><textarea id="f-address" rows="2" placeholder="Street, area, postcode, state"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Property type</label>
+          <select id="f-type"><option>Landed — Semi-D</option><option>Landed — Terrace</option><option>Landed — Bungalow</option><option>Condominium / Apartment</option><option>Commercial</option><option>Other</option></select></div>
+        <div class="field"><label>Engagement</label>
+          <select id="f-engage"><option>Hygiene inspection</option><option>Sewage / water damage</option><option>Mould assessment</option><option>Post-renovation</option><option>General</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Rooms (approx.)</label><input id="f-rooms" type="number" inputmode="numeric" min="0" placeholder="4"></div>
+        <div class="field"><label>Toilets</label><input id="f-toilets" type="number" inputmode="numeric" min="0" placeholder="2"></div>
+      </div>
+      <div class="field"><label>Inspector</label><input id="f-inspector" placeholder="e.g. Mr. Vin" autocomplete="off"></div>
+    </div>
+    <button class="btn primary" onclick="startCapture()">Start capture →</button>
+  </div>
+</section>
+
+<!-- ================= CAPTURE ================= -->
+<section id="screen-capture" class="hidden">
+  <div class="bar">
+    <button class="back" onclick="go('home')">‹ Save &amp; exit</button>
+    <div class="sp"></div>
+    <span id="cap-net" class="net">●</span>
+    <div class="sub" id="cap-title">Capture</div>
+  </div>
+  <div class="wrap">
+    <h2 id="cap-client">—</h2>
+    <p class="lead" id="cap-addr">—</p>
+
+    <div class="label">Rooms &amp; areas</div>
+    <div id="rooms"></div>
+    <button class="btn ghost" onclick="addRoom()">＋ Add room / area</button>
+
+    <div class="label">Air quality reading</div>
+    <div id="aq-box" class="card">
+      <p class="tiny" style="margin:0 0 10px">Snap the INKBIRD monitor display. The reading is extracted automatically.</p>
+      <button class="btn ink" onclick="capture('aq')">📷 Capture air-quality monitor</button>
+      <div id="aq-out"></div>
+    </div>
+
+    <div class="label">Thermal scans</div>
+    <div class="card">
+      <p class="tiny" style="margin:0 0 10px">HIKMICRO frames — Cen / Max / Min °C read off each shot.</p>
+      <button class="btn ink" onclick="capture('thermal')">📷 Add thermal frame</button>
+      <div id="thermal-out" style="margin-top:10px"></div>
+    </div>
+
+    <div class="label">Moisture readings</div>
+    <div class="card">
+      <p class="tiny" style="margin:0 0 10px">Protimeter Surveymaster — value + Dry / At&nbsp;Risk / Wet.</p>
+      <button class="btn ink" onclick="capture('moisture')">📷 Add moisture reading</button>
+      <div id="moisture-out" style="margin-top:10px"></div>
+    </div>
+
+    <div class="label">UV blue-light scans</div>
+    <div class="card">
+      <p class="tiny" style="margin:0 0 10px">Tag each UV photo so it lands in the right section of the report.</p>
+      <button class="btn ink" onclick="capture('uv')">📷 Add UV photo</button>
+      <div id="uv-out" style="margin-top:10px"></div>
+    </div>
+  </div>
+  <button class="btn primary fab" onclick="buildReport()">Review &amp; generate report →</button>
+</section>
+
+<!-- ================= REPORT ================= -->
+<section id="screen-report" class="hidden">
+  <div class="bar">
+    <button class="back" onclick="go('capture')">‹ Back to capture</button>
+    <div class="sp"></div>
+    <button class="btn sm ink" onclick="window.print()">Print</button>
+    <button class="btn sm primary" style="margin-left:8px" onclick="exportPdf()">PDF</button>
+  </div>
+  <div id="report-host" class="wrap"></div>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+<div id="modal-host"></div>
+
+<!-- hidden camera input -->
+<input id="cam" type="file" accept="image/*" capture="environment" class="hidden">
+
+<script>
+/* ============ tiny IndexedDB store ============ */
+const DB=(()=>{let p;function open(){if(!p)p=new Promise((res,rej)=>{const r=indexedDB.open('ch-inspector',1);
+  r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('inspections'))r.result.createObjectStore('inspections',{keyPath:'id'});};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});return p;}
+  const tx=(m)=>open().then(db=>db.transaction('inspections',m).objectStore('inspections'));
+  return{
+    put:v=>tx('readwrite').then(s=>new Promise((res,rej)=>{const q=s.put(v);q.onsuccess=()=>res();q.onerror=()=>rej(q.error);})),
+    all:()=>tx('readonly').then(s=>new Promise((res,rej)=>{const q=s.getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error);})),
+    get:id=>tx('readonly').then(s=>new Promise((res,rej)=>{const q=s.get(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);})),
+    del:id=>tx('readwrite').then(s=>new Promise((res,rej)=>{const q=s.delete(id);q.onsuccess=()=>res();q.onerror=()=>rej(q.error);}))
+  };
+})();
+
+/* ============ state ============ */
+let cur=null;            // current inspection
+const LS={ key:'ch_api_key', model:'ch_model' };
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const getKey=()=>localStorage.getItem(LS.key)||'';
+const getModel=()=>localStorage.getItem(LS.model)||'claude-opus-4-8';
+const $=s=>document.querySelector(s);
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),2600);}
+function go(s){['home','setup','capture','report'].forEach(x=>$('#screen-'+x).classList.toggle('hidden',x!==s));window.scrollTo(0,0);}
+async function save(){if(cur){cur.updatedAt=Date.now();await DB.put(cur);}}
+
+/* ============ network indicator ============ */
+function netUI(){const on=navigator.onLine;['#net','#cap-net'].forEach(id=>{const e=$(id);if(e){e.textContent=on?'● online':'● offline';e.className='net '+(on?'on':'off');}});}
+addEventListener('online',netUI);addEventListener('offline',netUI);
+
+/* ============ image capture + resize ============ */
+let _camCb=null;
+$('#cam').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(!f||!_camCb)return;
+  toast('Processing photo…');try{const d=await fileToDataUrl(f);_camCb(d);}catch(err){toast('Photo error: '+err.message);}_camCb=null;});
+function shoot(cb){_camCb=cb;$('#cam').click();}
+function loadImg(file){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file);});}
+async function fileToDataUrl(file,maxDim=1568,q=0.85){
+  let bmp;try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){bmp=await loadImg(file);}
+  const w=bmp.width,h=bmp.height,sc=Math.min(1,maxDim/Math.max(w,h));
+  const cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
+  const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+  cv.getContext('2d').drawImage(bmp,0,0,cw,ch);
+  if(bmp.close)bmp.close();
+  return cv.toDataURL('image/jpeg',q);
+}
+
+/* ============ Claude vision ============ */
+async function askClaude(dataUrl,prompt){
+  const key=getKey();if(!key)throw new Error('Add your API key in Settings.');
+  if(!navigator.onLine)throw new Error('Offline — reading will be filled when back online.');
+  const media=dataUrl.substring(5,dataUrl.indexOf(';'))||'image/jpeg';
+  const b64=dataUrl.split(',')[1];
+  const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:getModel(),max_tokens:600,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:media,data:b64}},
+        {type:'text',text:prompt}]}]})});
+  if(!res.ok){let m='HTTP '+res.status;try{const j=await res.json();m=(j.error&&j.error.message)||m;}catch(e){}throw new Error(m);}
+  const j=await res.json();
+  if(j.stop_reason==='refusal')throw new Error('Model declined this image.');
+  return (j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+}
+function parseJson(t){let s=t.replace(/```json|```/gi,'').trim();const a=s.indexOf('{'),b=s.lastIndexOf('}');if(a>=0&&b>a)s=s.slice(a,b+1);return JSON.parse(s);}
+const num=v=>{if(v==null||v==='')return null;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));return isNaN(n)?null:n;};
+
+const PROMPTS={
+  aq:`This is a photo of an INKBIRD indoor air-quality monitor screen. Read the digits exactly. Respond with ONLY a JSON object (no prose, no markdown) with numeric values or null if not visible:
+{"aqi":,"pm25":,"pm10":,"co2":,"tvoc":,"hcho":,"temp":,"humidity":}
+Units on the device: AQI index, PM2.5/PM10 in µg/m³, CO2 in ppm, TVOC in mg/m³, HCHO (formaldehyde) in mg/m³, temp in °C, humidity in %.`,
+  thermal:`This is a thermal-camera screenshot (HIKMICRO). It shows a legend with "Cen", "Max" and "Min" temperatures in °C. Respond with ONLY JSON, numbers or null:
+{"cen":,"max":,"min":}`,
+  moisture:`This is a Protimeter Surveymaster moisture meter. Read the number on the LCD and the classification word shown (DRY, AT RISK, or WET). Respond with ONLY JSON:
+{"value":,"classification":"Dry"|"At Risk"|"Wet"|null}`
+};
+
+/* ============ home ============ */
+async function refreshHome(){
+  $('#keywarn').classList.toggle('hidden',!!getKey());
+  const list=await DB.all();list.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const host=$('#insp-list');host.innerHTML='';
+  $('#insp-empty').classList.toggle('hidden',list.length>0);
+  for(const it of list){
+    const rooms=(it.rooms||[]).length, photos=countPhotos(it);
+    const d=new Date(it.updatedAt||it.createdAt);
+    const el=document.createElement('div');el.className='insp';
+    el.innerHTML=`<div onclick="openInspection('${it.id}')" style="flex:1">
+        <div class="nm">${esc(it.client||'Untitled')}</div>
+        <div class="meta">${esc((it.address||'').split('\\n')[0]||'No address')} · ${rooms} rooms · ${photos} photos</div>
+        <div class="meta">${d.toLocaleString()}</div></div>
+      <span class="pill">${esc(it.engage||'')}</span>
+      <button class="del" onclick="event.stopPropagation();removeInspection('${it.id}')">🗑</button>`;
+    host.appendChild(el);
+  }
+}
+function countPhotos(it){let n=0;(it.rooms||[]).forEach(r=>n+=(r.photos||[]).length);
+  if(it.aq&&it.aq.photo)n++;n+=(it.thermal||[]).length+(it.moisture||[]).length+(it.uv||[]).length;return n;}
+async function removeInspection(id){if(!confirm('Delete this inspection and its photos?'))return;await DB.del(id);refreshHome();}
+async function openInspection(id){cur=await DB.get(id);enterCapture();}
+
+/* ============ setup ============ */
+function newInspection(){
+  ['f-client','f-address','f-rooms','f-toilets','f-inspector'].forEach(i=>$('#'+i).value='');
+  $('#f-inspector').value=localStorage.getItem('ch_inspector')||'';
+  go('setup');
+}
+async function startCapture(){
+  const client=$('#f-client').value.trim();
+  if(!client){toast('Add a client name first.');return;}
+  localStorage.setItem('ch_inspector',$('#f-inspector').value.trim());
+  cur={id:uid(),createdAt:Date.now(),updatedAt:Date.now(),
+    client,address:$('#f-address').value.trim(),type:$('#f-type').value,engage:$('#f-engage').value,
+    roomsCount:$('#f-rooms').value,toilets:$('#f-toilets').value,inspector:$('#f-inspector').value.trim(),
+    rooms:[],aq:null,thermal:[],moisture:[],uv:[]};
+  await save();enterCapture();
+}
+
+/* ============ capture screen ============ */
+function enterCapture(){
+  $('#cap-client').textContent=cur.client||'Inspection';
+  $('#cap-addr').textContent=cur.address||'';
+  $('#cap-title').textContent=cur.engage||'Capture';
+  renderRooms();renderAQ();renderList('thermal');renderList('moisture');renderList('uv');
+  go('capture');netUI();
+}
+function addRoom(){
+  sheet('Add room / area',`
+    <div class="field"><label>Name</label><input id="m-rn" placeholder="e.g. Master bedroom" autocomplete="off"></div>
+    <div class="field"><label>Type</label><select id="m-rt">
+      <option>Living room</option><option>Master bedroom</option><option>Bedroom</option><option>Kitchen</option>
+      <option>Bathroom / Toilet</option><option>Maid's room</option><option>Store room</option><option>Hallway / Stairs</option><option>Other</option></select></div>
+    <button class="btn primary" onclick="commitRoom()">Add room</button>`);
+  setTimeout(()=>$('#m-rn')&&$('#m-rn').focus(),50);
+}
+async function commitRoom(){
+  const name=($('#m-rn').value||'').trim()||$('#m-rt').value;
+  cur.rooms.push({id:uid(),name,type:$('#m-rt').value,photos:[],notes:''});
+  closeSheet();await save();renderRooms();
+}
+function renderRooms(){
+  const host=$('#rooms');host.innerHTML='';
+  if(!cur.rooms.length){host.innerHTML='<div class="tiny" style="margin-bottom:10px">No rooms yet — add the living room, bedrooms, kitchen, toilets…</div>';}
+  cur.rooms.forEach(r=>{
+    const el=document.createElement('div');el.className='room';
+    el.innerHTML=`<div class="top"><div><div class="rn">${esc(r.name)}</div><div class="rt">${esc(r.type)}</div></div>
+        <button class="del" onclick="delRoom('${r.id}')">Remove</button></div>
+      <div class="thumbs" id="th-${r.id}"></div>
+      <div class="btnrow">
+        <button class="btn ink sm" style="flex:1" onclick="addRoomPhoto('${r.id}')">📷 Add photo</button>
+      </div>
+      <div class="field" style="margin:10px 0 0"><textarea rows="2" placeholder="Observations (optional)" onchange="roomNote('${r.id}',this.value)">${esc(r.notes||'')}</textarea></div>`;
+    host.appendChild(el);
+    const tw=$('#th-'+r.id);
+    (r.photos||[]).forEach((p,i)=>{const t=document.createElement('div');t.className='thumb';
+      t.innerHTML=`<img src="${p}"><button class="x" onclick="delRoomPhoto('${r.id}',${i})">×</button>`;tw.appendChild(t);});
+  });
+}
+function addRoomPhoto(id){shoot(async d=>{const r=cur.rooms.find(x=>x.id===id);r.photos.push(d);await save();renderRooms();});}
+async function delRoomPhoto(id,i){const r=cur.rooms.find(x=>x.id===id);r.photos.splice(i,1);await save();renderRooms();}
+async function roomNote(id,v){const r=cur.rooms.find(x=>x.id===id);r.notes=v;await save();}
+async function delRoom(id){cur.rooms=cur.rooms.filter(x=>x.id!==id);await save();renderRooms();}
+
+/* ---- instruments ---- */
+function capture(kind){
+  shoot(async d=>{
+    if(kind==='uv'){return tagUV(d);}
+    if(kind==='aq'){cur.aq={photo:d,readings:{},status:'reading'};await save();renderAQ();return extract('aq',cur.aq);}
+    const obj={id:uid(),photo:d,status:'reading'};
+    if(kind==='thermal'){obj.readings={};cur.thermal.push(obj);}
+    if(kind==='moisture'){obj.value=null;obj.classification=null;cur.moisture.push(obj);}
+    await save();renderList(kind);extract(kind,obj);
+  });
+}
+async function extract(kind,obj){
+  try{
+    const txt=await askClaude(obj.photo,PROMPTS[kind]);const j=parseJson(txt);
+    if(kind==='aq'){cur.aq.readings={aqi:num(j.aqi),pm25:num(j.pm25),pm10:num(j.pm10),co2:num(j.co2),tvoc:num(j.tvoc),hcho:num(j.hcho),temp:num(j.temp),humidity:num(j.humidity)};cur.aq.status='done';}
+    if(kind==='thermal'){obj.readings={cen:num(j.cen),max:num(j.max),min:num(j.min)};obj.status='done';}
+    if(kind==='moisture'){obj.value=num(j.value);obj.classification=j.classification||null;obj.status='done';}
+    toast('Reading captured ✓');
+  }catch(e){obj.status='error';obj.error=e.message;toast(e.message);}
+  await save();kind==='aq'?renderAQ():renderList(kind);
+}
+function statusLine(o){
+  if(o.status==='reading')return `<div class="status"><span class="spin"></span> Reading the display…</div>`;
+  if(o.status==='error')return `<div class="status" style="color:var(--bad)">⚠ ${esc(o.error||'failed')} <button class="btn sm ink" style="margin-left:6px" onclick="retry('${o.id||'aq'}')">Retry</button></div>`;
+  return '';
+}
+window.retry=function(id){
+  if(id==='aq')return extract('aq',cur.aq);
+  for(const k of ['thermal','moisture']){const o=(cur[k]||[]).find(x=>x.id===id);if(o){o.status='reading';renderList(k);return extract(k,o);}}
+};
+function renderAQ(){
+  const host=$('#aq-out');if(!cur.aq){host.innerHTML='';return;}
+  const r=cur.aq.readings||{};
+  const cell=(k,lab,unit)=>`<div class="read"><div class="k">${lab}</div><div class="v"><input value="${r[k]??''}" inputmode="decimal" onchange="aqEdit('${k}',this.value)"> <small>${unit}</small></div></div>`;
+  host.innerHTML=`<div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+      <img src="${cur.aq.photo}" style="width:64px;height:64px;border-radius:8px;object-fit:cover">
+      <div style="flex:1" class="tiny">Tap any value to correct it.</div>
+      <button class="del" onclick="clearAQ()">Remove</button></div>
+    ${statusLine(cur.aq)}
+    <div class="reads">${cell('aqi','AQI','')}${cell('humidity','Humidity','%')}${cell('temp','Temp','°C')}${cell('co2','CO₂','ppm')}${cell('pm25','PM2.5','µg/m³')}${cell('pm10','PM10','µg/m³')}${cell('tvoc','TVOC','mg/m³')}${cell('hcho','HCHO','mg/m³')}</div>`;
+}
+async function aqEdit(k,v){cur.aq.readings[k]=num(v);await save();}
+async function clearAQ(){cur.aq=null;await save();renderAQ();}
+
+function renderList(kind){
+  const host=$('#'+kind+'-out');const arr=cur[kind]||[];host.innerHTML='';
+  arr.forEach((o,i)=>{
+    const el=document.createElement('div');el.className='item';
+    let d='';
+    if(kind==='thermal'){const r=o.readings||{};d=`<b>Cen ${r.cen??'–'} · Max ${r.max??'–'} · Min ${r.min??'–'}</b> °C`;}
+    if(kind==='moisture'){const c=(o.classification||'').toLowerCase();const cls=c.includes('wet')?'wet':c.includes('risk')?'risk':'dry';
+      d=`<b>${o.value??'–'}</b> &nbsp; <span class="tag ${cls}">${esc(o.classification||'—')}</span>`;}
+    if(kind==='uv'){d=`<b>${esc(o.tag||'UV scan')}</b><div class="tiny">${esc(o.room||'')}</div>`;}
+    el.innerHTML=`<img src="${o.photo}"><div class="d">${d}${statusLine(o)}</div><button class="del" onclick="delItem('${kind}',${i})">✕</button>`;
+    host.appendChild(el);
+  });
+}
+async function delItem(kind,i){cur[kind].splice(i,1);await save();renderList(kind);}
+function tagUV(d){
+  sheet('Tag UV photo',`
+    <div class="field"><label>What does it show?</label><select id="uv-tag">
+      <option>Mould (wall/ceiling)</option><option>Biological residue</option><option>Sewage contamination</option><option>Surface staining</option><option>Clean / reference</option></select></div>
+    <div class="field"><label>Where?</label><input id="uv-room" placeholder="e.g. Living room ceiling"></div>
+    <button class="btn primary" onclick="commitUV()">Save</button>`);
+  window._uvPhoto=d;
+}
+async function commitUV(){cur.uv.push({id:uid(),photo:window._uvPhoto,tag:$('#uv-tag').value,room:($('#uv-room').value||'').trim()});closeSheet();await save();renderList('uv');}
+
+/* ============ settings ============ */
+function openSettings(){
+  sheet('Settings',`
+    <div class="field"><label>Anthropic API key</label>
+      <input id="s-key" type="password" placeholder="sk-ant-…" value="${esc(getKey())}" autocomplete="off"></div>
+    <p class="tiny">Stored only on this iPad. Used to read instrument photos and draft reports. Get one at console.anthropic.com.</p>
+    <div class="field" style="margin-top:12px"><label>Model</label>
+      <select id="s-model">
+        <option value="claude-opus-4-8">Opus 4.8 — most accurate (recommended)</option>
+        <option value="claude-sonnet-4-6">Sonnet 4.6 — faster / cheaper</option>
+      </select></div>
+    <button class="btn primary" onclick="saveSettings()">Save</button>`);
+  setTimeout(()=>{const m=$('#s-model');if(m)m.value=getModel();},30);
+}
+function saveSettings(){localStorage.setItem(LS.key,$('#s-key').value.trim());localStorage.setItem(LS.model,$('#s-model').value);closeSheet();refreshHome();toast('Saved');}
+
+/* ============ modal sheet ============ */
+function sheet(title,html){
+  $('#modal-host').innerHTML=`<div class="modal" onclick="if(event.target===this)closeSheet()"><div class="sheet"><h3>${esc(title)}</h3>${html}</div></div>`;
+}
+function closeSheet(){$('#modal-host').innerHTML='';}
+
+/* ============ report ============ */
+function fmt(v,dash='—'){return (v==null||v==='')?dash:v;}
+function buildReport(){
+  if(!cur.rooms.length && !cur.aq && !cur.thermal.length){toast('Capture at least one room or reading first.');return;}
+  const r=cur.aq&&cur.aq.readings||{};
+  const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  const stat=(lab,val,unit)=>`<div class="rstat"><div class="rk">${lab}</div><div class="rv">${fmt(val)}<span>${unit||''}</span></div></div>`;
+  const aqBlock = cur.aq ? `
+    <h3>Air quality — ground floor reading</h3>
+    <div class="rgrid">
+      ${stat('AQI',r.aqi)}${stat('Humidity',r.humidity,'%')}${stat('Temp',r.temp,'°C')}${stat('CO₂',r.co2,'ppm')}
+      ${stat('PM2.5',r.pm25,'µg/m³')}${stat('PM10',r.pm10,'µg/m³')}${stat('TVOC',r.tvoc,'mg/m³')}${stat('HCHO',r.hcho,'mg/m³')}
+    </div>` : '';
+  const thRows=(cur.thermal||[]).map((t,i)=>{const x=t.readings||{};return `<tr><td>Frame ${i+1}</td><td>${fmt(x.cen)}</td><td>${fmt(x.max)}</td><td>${fmt(x.min)}</td></tr>`;}).join('');
+  const thBlock = cur.thermal.length ? `<h3>Thermal mapping</h3>
+    <table class="rt"><tr><th>Location</th><th>Cen °C</th><th>Max °C</th><th>Min °C</th></tr>${thRows}</table>
+    <div class="rthumbs">${cur.thermal.map(t=>`<img src="${t.photo}">`).join('')}</div>` : '';
+  const moRows=(cur.moisture||[]).map((m,i)=>`<tr><td>Reading ${i+1}</td><td>${fmt(m.value)}</td><td>${fmt(m.classification)}</td></tr>`).join('');
+  const moBlock = cur.moisture.length ? `<h3>Moisture profile</h3>
+    <table class="rt"><tr><th>Point</th><th>Value</th><th>Class</th></tr>${moRows}</table>` : '';
+  const uvBlock = cur.uv.length ? `<h3>UV blue-light findings</h3>
+    <div class="rcards">${cur.uv.map(u=>`<figure><img src="${u.photo}"><figcaption><b>${esc(u.tag)}</b><br>${esc(u.room||'')}</figcaption></figure>`).join('')}</div>` : '';
+  const roomBlock = cur.rooms.length ? `<h3>Rooms &amp; areas</h3>` + cur.rooms.map(rm=>`
+    <div class="rroom"><div class="rrh"><b>${esc(rm.name)}</b><span>${esc(rm.type)}</span></div>
+      ${rm.notes?`<p>${esc(rm.notes)}</p>`:''}
+      <div class="rcards">${(rm.photos||[]).map(p=>`<figure><img src="${p}"></figure>`).join('')}</div></div>`).join('') : '';
+
+  const html=`<div id="report" class="report">
+    <div class="rcover">
+      <div class="rtop"><img class="rcoin" src="./assets/coin_gold.png"><div><div class="rbrand">CLEANAHOLICS</div><div class="rtag">The Doctor for Houses &amp; Buildings</div></div></div>
+      <div class="rtitle">Hygiene Inspection Record</div>
+      <div class="rmeta">
+        <div><span>Prepared for</span>${esc(cur.client)}</div>
+        <div><span>Residence</span>${esc(cur.address||'—').replace(/\\n/g,', ')}</div>
+        <div><span>Property</span>${esc(cur.type)}</div>
+        <div><span>Engagement</span>${esc(cur.engage)}</div>
+        <div><span>Date</span>${today}</div>
+        <div><span>Inspector</span>${esc(cur.inspector||'—')}</div>
+      </div>
+    </div>
+    <div class="rbody">
+      ${aqBlock}${moBlock}${thBlock}${uvBlock}${roomBlock}
+      <p class="rfoot">Captured on site with CH Inspector. Instrument values read automatically and verified by the inspector. Cleanaholics Sdn Bhd · SSM 201801016647 · WhatsApp 012-847 7669.</p>
+    </div></div>`;
+  $('#report-host').innerHTML=reportCSS()+html;
+  go('report');window.scrollTo(0,0);
+}
+function reportCSS(){return `<style>
+  .report{background:#fff;color:#23201a;border-radius:12px;overflow:hidden;font-family:Georgia,'Times New Roman',serif;}
+  .rcover{background:#14110C;color:#F5F0E6;padding:30px 26px 34px;}
+  .rtop{display:flex;align-items:center;gap:12px;}.rcoin{width:46px;height:46px;}
+  .rbrand{letter-spacing:.34em;font-family:Georgia,serif;font-size:17px;}
+  .rtag{font-style:italic;color:#C9BC9C;font-size:12px;margin-top:2px;}
+  .rtitle{font-size:30px;margin:26px 0 18px;font-weight:400;}
+  .rmeta{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;}
+  .rmeta div{font-size:13px;}.rmeta span{display:block;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#C6A861;margin-bottom:3px;font-family:-apple-system,sans-serif;}
+  .rbody{padding:24px 26px 30px;}
+  .rbody h3{font-size:18px;border-bottom:1px solid #e3dcc9;padding-bottom:7px;margin:26px 0 14px;font-weight:400;}
+  .rbody h3:first-child{margin-top:4px;}
+  .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e3dcc9;border:1px solid #e3dcc9;border-radius:6px;overflow:hidden;}
+  .rstat{background:#fff;padding:12px;}.rk{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8a7f63;font-family:-apple-system,sans-serif;}
+  .rv{font-size:22px;margin-top:5px;}.rv span{font-size:11px;color:#A2823B;}
+  .rt{width:100%;border-collapse:collapse;font-size:13px;}
+  .rt th{text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#8a7f63;border-bottom:1.5px solid #c7b690;padding:8px;font-family:-apple-system,sans-serif;}
+  .rt td{padding:8px;border-bottom:1px solid #ece6d7;}
+  .rthumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}.rthumbs img{width:120px;height:90px;object-fit:cover;border-radius:4px;border:1px solid #e3dcc9;}
+  .rcards{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+  .rcards figure{margin:0;width:150px;}.rcards img{width:150px;height:120px;object-fit:cover;border-radius:5px;border:1px solid #e3dcc9;display:block;}
+  .rcards figcaption{font-size:11px;color:#5d5440;margin-top:4px;font-family:-apple-system,sans-serif;}
+  .rroom{margin:14px 0;}.rrh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #ece6d7;padding-bottom:5px;}
+  .rrh span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#A2823B;font-family:-apple-system,sans-serif;}
+  .rroom p{font-size:13px;color:#3a3327;margin:8px 0;}
+  .rfoot{margin-top:26px;font-size:11px;color:#8a7f63;border-top:1px solid #e3dcc9;padding-top:12px;font-family:-apple-system,sans-serif;line-height:1.6;}
+  @media print{body *{visibility:hidden;}#screen-report,#screen-report *{visibility:visible;}#screen-report{position:absolute;inset:0;}.bar{display:none!important;}.report{border-radius:0;}}
+</style>`;}
+
+async function exportPdf(){
+  toast('Building PDF…');
+  try{
+    if(!window.html2pdf){await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');}
+    const el=$('#report');
+    await html2pdf().set({margin:0,filename:`Inspection-${(cur.client||'report').replace(/\\s+/g,'-')}.pdf`,
+      image:{type:'jpeg',quality:.92},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(el).save();
+  }catch(e){toast('PDF needs a connection the first time. Use Print as a fallback.');}
+}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('load failed'));document.head.appendChild(s);});}
+
+/* ============ boot ============ */
+if('serviceWorker'in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+/* One-time key setup via a #key=... link. URL fragments are never sent to the server,
+   so the key reaches the phone privately; we save it on-device and strip it from the URL. */
+try{const m=(location.hash||'').match(/key=([^&]+)/);if(m){localStorage.setItem(LS.key,decodeURIComponent(m[1]));history.replaceState(null,'',location.pathname+location.search);}}catch(e){}
+netUI();refreshHome();
+if(getKey()){toast('Connected ✓ — ready to inspect');}else{setTimeout(openSettings,500);}
+</script>
+</body>
+</html>
