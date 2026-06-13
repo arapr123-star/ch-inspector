@@ -155,7 +155,7 @@
         <div class="field"><label>Property type</label>
           <select id="f-type"><option>Landed — Semi-D</option><option>Landed — Terrace</option><option>Landed — Bungalow</option><option>Condominium / Apartment</option><option>Commercial</option><option>Other</option></select></div>
         <div class="field"><label>Engagement</label>
-          <select id="f-engage"><option>Hygiene inspection</option><option>Sewage / water damage</option><option>Mould assessment</option><option>Post-renovation</option><option>General</option></select></div>
+          <select id="f-engage"><option>Hygiene inspection</option><option>Substance verification — sawdust vs mould</option><option>Sewage / water damage</option><option>Mould assessment</option><option>Post-renovation</option><option>General</option></select></div>
       </div>
       <div class="row2">
         <div class="field"><label>Rooms (approx.)</label><input id="f-rooms" type="number" inputmode="numeric" min="0" placeholder="4"></div>
@@ -364,6 +364,19 @@ function newInspection(){
   ['f-client','f-address','f-rooms','f-toilets','f-inspector'].forEach(i=>$('#'+i).value='');
   $('#f-inspector').value=localStorage.getItem('ch_inspector')||'';
   go('setup');
+}
+/* Seed an inspection from a #new=<json> link — pre-loads today's job (client/address/type/engagement). */
+async function seedInspection(s){
+  try{
+    const o=JSON.parse(s); const id=o.id||uid();
+    const ex=await DB.get(id);
+    if(ex){cur=ex;}
+    else{cur={id,createdAt:Date.now(),updatedAt:Date.now(),
+      client:o.client||'',address:o.address||'',type:o.type||'Landed — Semi-D',engage:o.engage||'Hygiene inspection',
+      roomsCount:o.rooms||'',toilets:o.toilets||'',inspector:o.inspector||localStorage.getItem('ch_inspector')||'',
+      rooms:[],aq:null,thermal:[],moisture:[],uv:[]}; await DB.put(cur);}
+    setTimeout(()=>{enterCapture();toast('Loaded: '+(cur.client||'inspection')+' ✓');},250);
+  }catch(e){toast('Could not load the inspection link.');}
 }
 async function startCapture(){
   const client=$('#f-client').value.trim();
@@ -611,11 +624,18 @@ function loadScript(src){return new Promise((res,rej)=>{const s=document.createE
 
 /* ============ boot ============ */
 if('serviceWorker'in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
-/* One-time key setup via a #key=... link. URL fragments are never sent to the server,
-   so the key reaches the phone privately; we save it on-device and strip it from the URL. */
-try{const m=(location.hash||'').match(/key=([^&]+)/);if(m){localStorage.setItem(LS.key,decodeURIComponent(m[1]));history.replaceState(null,'',location.pathname+location.search);}}catch(e){}
+/* Link handling: #key=... saves the API key on-device; #new=<json> pre-loads today's inspection.
+   URL fragments are never sent to the server, so they stay private to the device. */
+let _seeded=false;
+try{
+  const h=location.hash||'';
+  const km=h.match(/key=([^&]+)/);if(km)localStorage.setItem(LS.key,decodeURIComponent(km[1]));
+  const nm=h.match(/new=([^&]+)/);
+  if(km||nm)history.replaceState(null,'',location.pathname+location.search);
+  if(nm){_seeded=true;seedInspection(decodeURIComponent(nm[1]));}
+}catch(e){}
 netUI();refreshHome();
-if(getKey()){toast('Connected ✓ — ready to inspect');}else{setTimeout(openSettings,500);}
+if(!_seeded){ if(getKey())toast('Connected ✓ — ready to inspect'); else setTimeout(openSettings,500); }
 </script>
 </body>
 </html>
