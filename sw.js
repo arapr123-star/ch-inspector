@@ -1,6 +1,6 @@
 /* CH Inspector — service worker. App-shell cache so the tool opens & runs offline on-site.
    Inspections + photos live in IndexedDB (not here). Network is only needed for AI extraction. */
-const CACHE = 'ch-inspector-v6';
+const CACHE = 'ch-inspector-v7';
 const SHELL = [
   './',
   './index.html',

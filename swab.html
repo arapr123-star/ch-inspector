@@ -55,7 +55,8 @@
   .tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--muted);margin-top:4px;}
   .sigwrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .sigbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px;}
-  .sigbox .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;margin-bottom:7px;}
+  .sigbox{display:flex;flex-direction:column;}
+  .sigbox .k{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:13px;line-height:13px;}
   .sigcanvas{width:100%;height:110px;background:#fff;border-radius:8px;touch-action:none;display:block;}
   .sigbox .clr{background:none;border:none;color:var(--gold);font-size:12px;margin-top:5px;padding:2px;}
   .modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;}
@@ -90,7 +91,7 @@
     <div class="label">Chain of custody &middot; signatures</div>
     <div class="sigwrap">
       <div class="sigbox">
-        <div class="k">Collected by (Cleanaholics)</div>
+        <div class="k">Collected by (CH)</div>
         <canvas class="sigcanvas" id="sig-col"></canvas>
         <button class="clr" onclick="clearSig('col')">Clear</button>
       </div>
